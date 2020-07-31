@@ -6,6 +6,9 @@
  * Author: Cecilia Castillo
  * Date: 31-Jul-2020
  */
+#include <Ethernet.h>
+#include <mac.h>
+#include <hue.h>
 
 #include <SimpleDHT.h>
 int pinDHT11 = A0;
@@ -13,32 +16,28 @@ SimpleDHT11 dht11;
 
 int pinBuzzer = 15;
 int pinButton = 23;
-int k = 0;
-unsigned long button_time = 0;  
-unsigned long last_button_time = 0;
-bool buzzerOn = true;
+bool alertOn = false;
+int humidityThreshold = 75;
+IPAddress ip(192,168,1,20);  // My Teensy IP
 
 void setup() {
-  pinMode(pinBuzzer, OUTPUT);
-  //attachInterrupt(digitalPinToInterrupt(pinButton), buzzerInterrupt, FALLING);
   Serial.begin(9600);
+  Ethernet.begin(mac,ip);
+  delay(2000);              // Wait for Serial Monitor
+  Serial.print("LinkStatus: ");
+  Serial.println(Ethernet.linkStatus());
+  pinMode(pinBuzzer, OUTPUT);
 }
 
 void loop() {
-  if(buzzerOn){
-    playBuzzer();
-    buzzerOn = false;
-  } else {
-    stopBuzzer();
-  }
-
-//  if(getHumidity() > humidityThreshold){
+  if(getHumidity() > humidityThreshold){
+    alertOn = true;
 //    playBuzzer();
 //    startFans();
-//    flashLights();
-//  } else {
-//    stopAlerts();
-//  }
+    flashLights();
+  } else {
+    stopAlerts();
+  }
 }
 
 void playBuzzer(){
@@ -52,20 +51,29 @@ void playBuzzer(){
   }
 }
 
-void stopBuzzer(){
-  noTone(pinBuzzer);
-}
-
 void startFans(){
   return;
 }
 
 void flashLights(){
-  return;
+  for(int i = 1; i < 5; i++){
+    setHue(i, true, HueRed, 200);
+  }
+  delay(1000);
+  for(int i = 1; i < 5; i++){
+    setHue(i, false, 0, 0);
+  }
 }
 
 void stopAlerts(){
-  return;
+  //Only run setHue once when stopping alerts.
+  if(alertOn){
+    alertOn = false;
+    noTone(pinBuzzer);
+    for(int i = 1; i < 5; i++){
+      setHue(i, false, 0, 0);
+    }
+  }
 }
 
 int getHumidity(){
