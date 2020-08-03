@@ -52,8 +52,8 @@ void loop() {
   if(getHumidity() > humidityThreshold){
     alertOn = true;
     playBuzzer();
-//    startFans();
-//    flashLights();
+    startFans();
+    flashLights();
   } else {
     stopAlerts();
   }
@@ -100,15 +100,15 @@ void stopAlerts(){
     noTone(pinBuzzer);
     
     //lights off.
-//    for(int i = 1; i < 5; i++){
-//      setHue(i, false, 0, 0);
-//    }
-//    
-//    //fans off.
-//    fansOn = false;
-//    Serial.println("turned OFF fan");
-//    myWemo.switchOFF(fans[0]);
-//    myWemo.switchOFF(fans[1]);
+    for(int i = 1; i < 5; i++){
+      setHue(i, false, 0, 0);
+    }
+    
+    //fans off.
+    fansOn = false;
+    Serial.println("turned OFF fan");
+    myWemo.switchOFF(fans[0]);
+    myWemo.switchOFF(fans[1]);
   }
 }
 
