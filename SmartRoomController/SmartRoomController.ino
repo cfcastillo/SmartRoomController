@@ -7,12 +7,20 @@
  * Date: 31-Jul-2020
  */
 #include <Ethernet.h>
-#include "OneButton.h"
+#include <OneButton.h>
 #include "mac.h"
 #include "hue.h"
 #include "Wemo.h"
 
-#include "SimpleDHT.h"
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+const int SCREEN_WIDTH = 128; // OLED display width, in pixels
+const int SCREEN_HEIGHT = 32; // OLED display height, in pixels
+// Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
+const int OLED_RESET = 4; // Reset pin # (or -1 if sharing Arduino reset pin)
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+#include <SimpleDHT.h>
 int pinDHT11 = A0;
 SimpleDHT11 dht11;
 
@@ -32,14 +40,20 @@ void setup() {
   Serial.print("LinkStatus: ");
   Serial.println(Ethernet.linkStatus());
   pinMode(pinBuzzer, OUTPUT);
+  // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
+  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3C for 128x32
+    Serial.println(F("SSD1306 allocation failed"));
+  }
+  display.clearDisplay();
+  display.display();
 }
 
 void loop() {
   if(getHumidity() > humidityThreshold){
     alertOn = true;
     playBuzzer();
-    startFans();
-    flashLights();
+//    startFans();
+//    flashLights();
   } else {
     stopAlerts();
   }
@@ -89,12 +103,12 @@ void stopAlerts(){
 //    for(int i = 1; i < 5; i++){
 //      setHue(i, false, 0, 0);
 //    }
-    
-    //fans off.
-    fansOn = false;
-    Serial.println("turned OFF fan");
-    myWemo.switchOFF(fans[0]);
-    myWemo.switchOFF(fans[1]);
+//    
+//    //fans off.
+//    fansOn = false;
+//    Serial.println("turned OFF fan");
+//    myWemo.switchOFF(fans[0]);
+//    myWemo.switchOFF(fans[1]);
   }
 }
 
@@ -112,6 +126,9 @@ int getHumidity(){
   }
 
   lastGoodHumidity = (int)humidity;
+
+  //print humidity to OLED
+  displayHumidity(lastGoodHumidity);
   
   //prints byte data
   for (int i=0; i<40; i++){
@@ -135,4 +152,18 @@ int getHumidity(){
   //unfortunately values are integers only.
   return humidity;
 
+}
+
+void displayHumidity(int value){
+  display.clearDisplay();
+  //0 - default - landscape to top
+  //1 - portrait to right
+  //2 - landscape to bottom
+  //3 - portrait to left
+  display.setRotation(0);
+  display.setTextSize(2);             // Normal 1:1 pixel scale
+  display.setTextColor(SSD1306_WHITE);        // Draw white text
+  display.setCursor(0,0); 
+  display.printf("Humidity: %i", value);
+  display.display();
 }
