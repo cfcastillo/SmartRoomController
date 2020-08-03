@@ -7,18 +7,23 @@
  * Date: 31-Jul-2020
  */
 #include <Ethernet.h>
-#include <mac.h>
-#include <hue.h>
+#include "OneButton.h"
+#include "mac.h"
+#include "hue.h"
+#include "Wemo.h"
 
-#include <SimpleDHT.h>
+#include "SimpleDHT.h"
 int pinDHT11 = A0;
 SimpleDHT11 dht11;
 
 int pinBuzzer = 15;
 int pinButton = 23;
+int fans[] = {2, 3}; //fans are on wemos 2 and 3
+int fansOn = false; //state variable so don't keep trying to start fans.
 bool alertOn = false;
 int humidityThreshold = 75;
 IPAddress ip(192,168,1,20);  // My Teensy IP
+Wemo myWemo;
 
 void setup() {
   Serial.begin(9600);
@@ -32,8 +37,8 @@ void setup() {
 void loop() {
   if(getHumidity() > humidityThreshold){
     alertOn = true;
-//    playBuzzer();
-//    startFans();
+    playBuzzer();
+    startFans();
     flashLights();
   } else {
     stopAlerts();
@@ -52,7 +57,14 @@ void playBuzzer(){
 }
 
 void startFans(){
-  return;
+  //todo: read length of fans array and use for loop.
+  if (!fansOn){
+    fansOn = true;
+  
+    Serial.println("turned fans ON");
+    myWemo.switchON(fans[0]);
+    myWemo.switchON(fans[1]);
+  }
 }
 
 void flashLights(){
@@ -69,10 +81,20 @@ void stopAlerts(){
   //Only run setHue once when stopping alerts.
   if(alertOn){
     alertOn = false;
+    
+    //buzzer off.
     noTone(pinBuzzer);
-    for(int i = 1; i < 5; i++){
-      setHue(i, false, 0, 0);
-    }
+    
+    //lights off.
+//    for(int i = 1; i < 5; i++){
+//      setHue(i, false, 0, 0);
+//    }
+    
+    //fans off.
+    fansOn = false;
+    Serial.println("turned OFF fan");
+    myWemo.switchOFF(fans[0]);
+    myWemo.switchOFF(fans[1]);
   }
 }
 
@@ -80,13 +102,17 @@ int getHumidity(){
   byte temperature = 0;
   byte humidity = 0;
   byte data[40] = {0};
+  static int lastGoodHumidity;  //hack. every 3 or 4 readings fail.
 
   //If returns anything other than zero, there was an error.
   //Note, this sensor frequently returns errors inside valid reads.
   if(dht11.read(pinDHT11, &temperature, &humidity, data)){
 //    Serial.println("Read DHT11 failed");
-    return 0;
+    return lastGoodHumidity;
   }
+
+  lastGoodHumidity = (int)humidity;
+  
   //prints byte data
   for (int i=0; i<40; i++){
     Serial.print((int)data[i]);
